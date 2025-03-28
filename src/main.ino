@@ -3,6 +3,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <DHTesp.h>
+#include <WiFi.h>
+
 
 // Define the OLED display
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
@@ -19,6 +21,12 @@
 #define PB_DOWN 35
 
 #define DHTPIN 12
+
+
+#define NTP_SERVER     "pool.ntp.org"
+#define UTC_OFFSET     19800   // Sri Lanka is UTC+5:30, which is 19800 seconds
+#define UTC_OFFSET_DST 0
+
 
 
 //declare objects
@@ -77,7 +85,23 @@ void setup()
   }
   display.display();
   // delay(2000);
+  WiFi.begin("Wokwi-GUEST", "", 6);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(250);
+    display.clearDisplay();
+    print_line("Connecting to WiFi", 0, 0, 2);
+    
+  }
+
   display.clearDisplay();
+  print_line("Connected to WiFi", 0, 0, 2);
+
+  configTime(UTC_OFFSET, UTC_OFFSET_DST, NTP_SERVER);
+
+
+  display.clearDisplay();
+
+  
 
   print_line("Welcome to Medibox!", 10, 20, 2);
   // delay(2000);
@@ -121,23 +145,12 @@ void print_time_now()
 
 void update_time()
 {
-  timeNow = millis() / 1000;
-  seconds = timeNow - timeLast;
-  if (seconds >= 60)
-  {
-    minutes++;
-    timeLast += 60;
-  }
-  if (minutes >= 60)
-  {
-    hours++;
-    minutes = 0;
-  }
-  if (hours >= 24)
-  {
-    days++;
-    hours = 0;
-  }
+  struct tm timeinfo;
+  getLocalTime(&timeinfo);
+  days = timeinfo.tm_mday;
+  hours = timeinfo.tm_hour;
+  minutes = timeinfo.tm_min;
+  seconds = timeinfo.tm_sec;
 }
 void ring_alarm()
 {
@@ -444,3 +457,4 @@ void check_temp(){
     
   }
 }
+
