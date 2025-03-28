@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <DHTesp.h>
 
 // Define the OLED display
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
@@ -17,7 +18,12 @@
 #define PB_UP 33
 #define PB_DOWN 35
 
+#define DHTPIN 12
+
+
+//declare objects
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+DHTesp dhtSensor;
 
 // Global variables
 int days = 0;
@@ -60,6 +66,8 @@ void setup()
   pinMode(PB_UP, INPUT);
   pinMode(PB_DOWN, INPUT);
 
+  dhtSensor.setup(DHTPIN, DHTesp::DHT22);
+
   Serial.begin(115200);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
   {
@@ -86,6 +94,7 @@ void loop()
     delay(200);
     go_to_menu();
   }
+  check_temp();
 }
 
 void print_line(String text, int column, int row, int text_size)
@@ -409,5 +418,29 @@ void run_mode(int mode)
   else if (mode == 3)
   {
     alarm_enabled = false;
+  }
+}
+
+void check_temp(){
+  TempAndHumidity data=dhtSensor.getTempAndHumidity();
+  if(data.temperature>35){
+    
+    print_line("Temperature is high!", 0, 40, 1);
+    
+  }
+  else if(data.temperature<25){
+    
+    print_line("Temperature is low!", 0, 40, 1);
+    
+  }
+  if(data.humidity>40){
+    
+    print_line("Humidity is high!", 0, 50, 1);
+    
+  }
+  else if(data.humidity<20){
+    
+    print_line("Humidity is low!", 0, 50, 1);
+    
   }
 }
