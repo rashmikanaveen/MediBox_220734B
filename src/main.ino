@@ -61,8 +61,13 @@ int C_H = 523;
 int notes[8] = {C, D, E, F, G, A, B, C_H};
 
 int current_mode = 0;
-int max_modes = 4;
-String modes[4] = {"1-Set Time", "2-Set Alarm1", "3-Set Alarm2", "4-Desable Alarm"};
+int max_modes = 6;
+String modes[6] = {"1-Set Time",
+   "2-Set Alarm1",
+    "3-Set Alarm2",
+     "4-Disable Alarm",
+     "5-View Alarms",
+     "6-Delete Alarm"};
 
 void setup()
 {
@@ -340,6 +345,8 @@ void set_time()
 
 void set_alarm(int alarm) {
 
+  Serial.println("Alarm " + String(alarm));
+
   int temp_hour = alarm_hours[alarm];
   int temp_minute = alarm_minutes[alarm];
   
@@ -432,6 +439,13 @@ void run_mode(int mode)
   {
     alarm_enabled = false;
   }
+  else if(mode ==4){
+    view_active_alarms();
+    
+  }
+  else if (mode == 5) {
+    delete_alarm();
+  }
 }
 
 void check_temp(){
@@ -458,3 +472,53 @@ void check_temp(){
   }
 }
 
+
+
+//my implementtaions
+void view_active_alarms() {
+  display.clearDisplay();
+  while (digitalRead(PB_CANCEL) == HIGH){
+  for (int i = 0; i < n_alarm; i++) {
+    if(alarm_hours[i]==-1 && alarm_minutes[i]==-1 ){
+      String alarmText = "Alarm " + String(i + 1) + ":is not set" ;
+    print_line(alarmText, 0, i * 10, 1); // Display each alarm on a new line
+    }
+    else{
+      String alarmText = "Alarm " + String(i + 1) + ": " + String(alarm_hours[i]) + ":" + String(alarm_minutes[i]);
+    print_line(alarmText, 0, i * 10, 1); // Display each alarm on a new line
+    }
+  }}
+  
+  display.clearDisplay();
+}
+
+void delete_alarm() {
+  int alarm_to_delete = 0;
+
+  while (true) {
+    display.clearDisplay();
+    print_line("Delete Alarm: " + String(alarm_to_delete + 1), 0, 0, 2);
+    int pressed = wait_for_button_press();
+    if (pressed == PB_UP) {
+      alarm_to_delete++;
+      alarm_to_delete = alarm_to_delete % n_alarm;
+    } else if (pressed == PB_DOWN) {
+      alarm_to_delete--;
+      if (alarm_to_delete < 0) {
+        alarm_to_delete = n_alarm - 1;
+      }
+    } else if (pressed == PB_OK) {
+      delay(200);
+      alarm_hours[alarm_to_delete] = -1; // Mark the alarm as deleted
+      alarm_minutes[alarm_to_delete] = -1;
+      alarm_triggered[alarm_to_delete] = false;
+      display.clearDisplay();
+      print_line("Alarm Deleted!", 0, 0, 2);
+      delay(1000);
+      break;
+    } else if (pressed == PB_CANCEL) {
+      delay(200);
+      break;
+    }
+  }
+}
