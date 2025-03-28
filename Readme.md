@@ -22,6 +22,7 @@ This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and App
 - The **Wokwi Simulator** was used to design and simulate the hardware components of the Smart MediBox.
 - Wokwi provides a virtual environment to test the ESP32, OLED display, DHT22 sensor, buzzer, and push buttons without requiring physical hardware.
 - [Visit Wokwi](https://wokwi.com/) to learn more.
+- **View the Smart MediBox Project on Wokwi**: [Smart MediBox on Wokwi](https://wokwi.com/projects/426657665966733313)
 
 ### PlatformIO
 - **PlatformIO** was used as the development environment for writing, building, and uploading the firmware to the ESP32.
