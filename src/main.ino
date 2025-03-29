@@ -21,6 +21,10 @@
 
 #define DHTPIN 12
 
+#define LED_HUMIDITY 25
+#define LED_TEMP 26
+
+
 #define NTP_SERVER "pool.ntp.org"
 #define UTC_OFFSET 19800 // Sri Lanka is UTC+5:30, which is 19800 seconds
 #define UTC_OFFSET_DST 0
@@ -58,6 +62,7 @@ int notes[8] = {C, D, E, F, G, A, B, C_H};
 
 int current_mode = 0;
 int max_modes = 6;
+
 String modes[6] = {"1-Set Time",
                    "2-Set Alarm1",
                    "3-Set Alarm2",
@@ -65,7 +70,9 @@ String modes[6] = {"1-Set Time",
                    "5-View Alarms",
                    "6-Delete Alarm"};
 
+
 void setup()
+
 {
 
   pinMode(BUZZER, OUTPUT);
@@ -74,6 +81,9 @@ void setup()
   pinMode(PB_OK, INPUT);
   pinMode(PB_UP, INPUT);
   pinMode(PB_DOWN, INPUT);
+  pinMode(LED_HUMIDITY, OUTPUT);
+  pinMode(LED_TEMP, OUTPUT);
+
 
   dhtSensor.setup(DHTPIN, DHTesp::DHT22);
 
@@ -106,6 +116,7 @@ void setup()
   display.clearDisplay();
 }
 
+
 void loop()
 {
   // Serial.println(wait_for_button_press());
@@ -119,14 +130,33 @@ void loop()
   check_temp();
 }
 
-void print_line(String text, int column, int row, int text_size)
+
+void update_time_with_check_alarm()
 {
-  // display.clearDisplay();
-  display.setTextSize(text_size);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(column, row);
-  display.println(text);
-  display.display();
+  update_time();
+  print_time_now();
+
+  if (alarm_enabled == true)
+  {
+    for (int i = 0; i < n_alarm; i++)
+    {
+      if (alarm_triggered[i] == false && alarm_hours[i] == hours && alarm_minutes[i] == minutes)
+      {
+        ring_alarm(i); // Pass the alarm index
+        alarm_triggered[i] = true;
+      }
+    }
+  }
+}
+
+void update_time()
+{
+  struct tm timeinfo;
+  getLocalTime(&timeinfo);
+  days = timeinfo.tm_mday;
+  hours = timeinfo.tm_hour;
+  minutes = timeinfo.tm_min;
+  seconds = timeinfo.tm_sec;
 }
 
 void print_time_now()
@@ -141,15 +171,23 @@ void print_time_now()
   print_line(String(seconds), 90, 0, 2);
 }
 
-void update_time()
+
+
+void print_line(String text, int column, int row, int text_size)
 {
-  struct tm timeinfo;
-  getLocalTime(&timeinfo);
-  days = timeinfo.tm_mday;
-  hours = timeinfo.tm_hour;
-  minutes = timeinfo.tm_min;
-  seconds = timeinfo.tm_sec;
+  // display.clearDisplay();
+  display.setTextSize(text_size);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(column, row);
+  display.println(text);
+  display.display();
 }
+
+
+
+
+
+
 
 void ring_alarm(int alarm_index)
 {
@@ -199,23 +237,6 @@ void ring_alarm(int alarm_index)
   display.clearDisplay();
 }
 
-void update_time_with_check_alarm()
-{
-  update_time();
-  print_time_now();
-
-  if (alarm_enabled == true)
-  {
-    for (int i = 0; i < n_alarm; i++)
-    {
-      if (alarm_triggered[i] == false && alarm_hours[i] == hours && alarm_minutes[i] == minutes)
-      {
-        ring_alarm(i); // Pass the alarm index
-        alarm_triggered[i] = true;
-      }
-    }
-  }
-}
 
 int wait_for_button_press()
 {
@@ -244,6 +265,7 @@ int wait_for_button_press()
   }
   update_time();
 }
+
 
 void go_to_menu()
 {
@@ -352,6 +374,11 @@ void set_time()
   delay(1000);
 }
 
+
+
+
+
+
 void set_alarm(int alarm)
 {
 
@@ -427,6 +454,10 @@ void set_alarm(int alarm)
   delay(1000);
 }
 
+
+
+
+
 void run_mode(int mode)
 {
   if (mode == 0)
@@ -456,6 +487,11 @@ void run_mode(int mode)
   }
 }
 
+
+
+
+
+
 void check_temp()
 {
   TempAndHumidity data = dhtSensor.getTempAndHumidity();
@@ -463,21 +499,30 @@ void check_temp()
   {
 
     print_line("Temperature is high!", 0, 40, 1);
+    digitalWrite(LED_TEMP, HIGH);
   }
   else if (data.temperature < 24)
   {
 
     print_line("Temperature is low!", 0, 40, 1);
+    digitalWrite(LED_TEMP, HIGH);
   }
   if (data.humidity > 80)
   {
 
     print_line("Humidity is high!", 0, 50, 1);
+    digitalWrite(LED_HUMIDITY, HIGH);
   }
   else if (data.humidity < 65)
   {
 
     print_line("Humidity is low!", 0, 50, 1);
+    digitalWrite(LED_HUMIDITY, HIGH);
+  }
+  else
+  {
+    digitalWrite(LED_TEMP, LOW);
+    digitalWrite(LED_HUMIDITY, LOW);
   }
 }
 
@@ -504,6 +549,11 @@ void view_active_alarms()
 
   display.clearDisplay();
 }
+
+
+
+
+
 
 void delete_alarm()
 {
