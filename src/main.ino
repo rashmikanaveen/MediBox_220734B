@@ -4,9 +4,9 @@
 #include <Adafruit_SSD1306.h>
 #include <DHTesp.h>
 #include <WiFi.h>
-#include<WiFiManager.h>
 #include<WiFiUdp.h>
 #include<NTPClient.h>
+
 
 // Define the OLED display
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
@@ -32,7 +32,7 @@
 
 // declare objects
 WiFiUDP udp;
-NTPClient timeClient(udp, "pool.ntp.org", 19800, 60000); // Sri Lanka is UTC+5:30, which is 19800 seconds
+NTPClient timeClient(udp, "pool.ntp.org", 19800, 60000);
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 DHTesp dhtSensor;
@@ -88,9 +88,9 @@ void setup()
   pinMode(LED_HUMIDITY, OUTPUT);
   pinMode(LED_TEMP, OUTPUT);
 
+  
 
   dhtSensor.setup(DHTPIN, DHTesp::DHT22);
-  timeClient.begin();
 
   Serial.begin(115200);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
@@ -111,6 +111,7 @@ void setup()
 
   display.clearDisplay();
   print_line("Connected to WiFi", 0, 0, 2);
+  timeClient.begin();
 
   
 
@@ -119,11 +120,13 @@ void setup()
   print_line("Welcome to Medibox!", 10, 20, 2);
   // delay(2000);
   display.clearDisplay();
+
 }
 
 
 void loop()
 {
+  
   // Serial.println(wait_for_button_press());
 
   update_time_with_check_alarm();
@@ -138,10 +141,9 @@ void loop()
 
 void update_time_with_check_alarm()
 {
-  timeClient.update();
-  Serial.println(timeClient.getFormattedTime());
-  //update_time();
-  //print_time_now();
+  
+  update_time();
+  
 
   if (alarm_enabled == true)
   {
@@ -158,26 +160,14 @@ void update_time_with_check_alarm()
 
 void update_time()
 {
-  
-  struct tm timeinfo;
-  getLocalTime(&timeinfo);
-  days = timeinfo.tm_mday;
-  hours = timeinfo.tm_hour;
-  minutes = timeinfo.tm_min;
-  seconds = timeinfo.tm_sec;
+  timeClient.update();
+  Serial.print("Current time: ");
+  Serial.println(timeClient.getFormattedTime());
+  display.clearDisplay();
+  print_line(timeClient.getFormattedTime(), 0, 0, 2);
 }
 
-void print_time_now()
-{
-  display.clearDisplay();
-  print_line(String(days), 0, 0, 2);
-  print_line(":", 20, 0, 2);
-  print_line(String(hours), 30, 0, 2);
-  print_line(":", 50, 0, 2);
-  print_line(String(minutes), 60, 0, 2);
-  print_line(":", 80, 0, 2);
-  print_line(String(seconds), 90, 0, 2);
-}
+
 
 
 
