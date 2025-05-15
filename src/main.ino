@@ -4,8 +4,11 @@
 #include <Adafruit_SSD1306.h>
 #include <DHTesp.h>
 #include <WiFi.h>
+
 #include<WiFiUdp.h>
 #include<NTPClient.h>
+#include<PubSubClient.h>
+#include "config.h"
 
 
 // Define the OLED display
@@ -24,8 +27,6 @@
 
 #define DHTPIN 12
 
-#define LED_HUMIDITY 25
-#define LED_TEMP 26
 
 
 
@@ -36,6 +37,9 @@ NTPClient timeClient(udp, "pool.ntp.org", 19800, 60000);
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 DHTesp dhtSensor;
+
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
 
 // Global variables
 int days = 0;
@@ -75,6 +79,11 @@ String modes[6] = {"1-Set Time",
                    "6-Delete Alarm"};
 
 
+
+
+
+
+
 void setup()
 
 {
@@ -101,13 +110,10 @@ void setup()
   }
   display.display();
   // delay(2000);
-  WiFi.begin("Wokwi-GUEST", "", 6);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(250);
-    display.clearDisplay();
-    print_line("Connecting to WiFi", 0, 0, 2);
-  }
+
+  setupWiFiWokwi();
+  setupMQTT();
+
 
   display.clearDisplay();
   print_line("Connected to WiFi", 0, 0, 2);
@@ -128,6 +134,12 @@ void loop()
 {
   
   // Serial.println(wait_for_button_press());
+
+  if(!mqttClient.connected()){
+    connectToBroker();
+  }
+  mqttClient.loop();
+  mqttClient.publish("rashmikanaveen", "hi");
 
   update_time_with_check_alarm();
   if (digitalRead(PB_OK) == LOW)
@@ -161,8 +173,8 @@ void update_time_with_check_alarm()
 void update_time()
 {
   timeClient.update();
-  Serial.print("Current time: ");
-  Serial.println(timeClient.getFormattedTime());
+  //Serial.print("Current time: ");
+  //Serial.println(timeClient.getFormattedTime());
   display.clearDisplay();
   print_line(timeClient.getFormattedTime(), 0, 0, 2);
 }
@@ -490,40 +502,6 @@ void run_mode(int mode)
 
 
 
-void check_temp()
-{
-  TempAndHumidity data = dhtSensor.getTempAndHumidity();
-  if (data.temperature > 32)
-  {
-
-    print_line("Temperature is high!", 0, 40, 1);
-    digitalWrite(LED_TEMP, HIGH);
-  }
-  else if (data.temperature < 24)
-  {
-
-    print_line("Temperature is low!", 0, 40, 1);
-    digitalWrite(LED_TEMP, HIGH);
-  }
-  if (data.humidity > 80)
-  {
-
-    print_line("Humidity is high!", 0, 50, 1);
-    digitalWrite(LED_HUMIDITY, HIGH);
-  }
-  else if (data.humidity < 65)
-  {
-
-    print_line("Humidity is low!", 0, 50, 1);
-    digitalWrite(LED_HUMIDITY, HIGH);
-  }
-  else
-  {
-    digitalWrite(LED_TEMP, LOW);
-    digitalWrite(LED_HUMIDITY, LOW);
-  }
-}
-
 // my implementtaions
 void view_active_alarms()
 {
@@ -593,3 +571,4 @@ void delete_alarm()
     }
   }
 }
+
