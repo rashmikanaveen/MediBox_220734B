@@ -4,6 +4,9 @@
 #include <Adafruit_SSD1306.h>
 #include <DHTesp.h>
 #include <WiFi.h>
+#include<WiFiManager.h>
+#include<WiFiUdp.h>
+#include<NTPClient.h>
 
 // Define the OLED display
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
@@ -25,11 +28,12 @@
 #define LED_TEMP 26
 
 
-#define NTP_SERVER "pool.ntp.org"
-#define UTC_OFFSET 19800 // Sri Lanka is UTC+5:30, which is 19800 seconds
-#define UTC_OFFSET_DST 0
+
 
 // declare objects
+WiFiUDP udp;
+NTPClient timeClient(udp, "pool.ntp.org", 19800, 60000); // Sri Lanka is UTC+5:30, which is 19800 seconds
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 DHTesp dhtSensor;
 
@@ -86,6 +90,7 @@ void setup()
 
 
   dhtSensor.setup(DHTPIN, DHTesp::DHT22);
+  timeClient.begin();
 
   Serial.begin(115200);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
@@ -107,7 +112,7 @@ void setup()
   display.clearDisplay();
   print_line("Connected to WiFi", 0, 0, 2);
 
-  configTime(UTC_OFFSET, UTC_OFFSET_DST, NTP_SERVER);
+  
 
   display.clearDisplay();
 
@@ -133,8 +138,10 @@ void loop()
 
 void update_time_with_check_alarm()
 {
-  update_time();
-  print_time_now();
+  timeClient.update();
+  Serial.println(timeClient.getFormattedTime());
+  //update_time();
+  //print_time_now();
 
   if (alarm_enabled == true)
   {
@@ -151,6 +158,7 @@ void update_time_with_check_alarm()
 
 void update_time()
 {
+  
   struct tm timeinfo;
   getLocalTime(&timeinfo);
   days = timeinfo.tm_mday;
