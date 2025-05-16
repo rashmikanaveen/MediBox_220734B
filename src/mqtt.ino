@@ -44,6 +44,9 @@ void connectToBroker(){
       mqttClient.subscribe("rashmikanaveen");
       mqttClient.subscribe("rashmikanaveen-ts");
       mqttClient.subscribe("rashmikanaveen-tu");
+      mqttClient.subscribe("rashmikanaveen-θ_offset");
+      mqttClient.subscribe("rashmikanaveen-γ");
+      mqttClient.subscribe("rashmikanaveen-T_med");
     }else{
       Serial.print("Failed to connect, rc=");
       Serial.print(mqttClient.state());
