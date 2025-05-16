@@ -17,7 +17,7 @@
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
-#define BUZZER 5
+
 #define LED_1 15
 
 #define PB_CANCEL 34
@@ -26,6 +26,7 @@
 #define PB_DOWN 35
 
 #define DHTPIN 12
+
 
 
 
@@ -49,12 +50,16 @@ int seconds = 0;
 
 unsigned long timeNow = 0;
 unsigned long timeLast = 0;
+unsigned long lastSample = 0;
 
 bool alarm_enabled = true;
 int n_alarm = 2;
-int alarm_hours[2] = {0, 23};
-int alarm_minutes[2] = {23, 59};
+int alarm_hours[2] = {18, 18};
+int alarm_minutes[2] = {19, 20};
 bool alarm_triggered[2] = {false, false};
+
+
+bool alarm_on = false;
 
 int n_notes = 8;
 int C = 262;
@@ -97,7 +102,8 @@ void setup()
   pinMode(LED_HUMIDITY, OUTPUT);
   pinMode(LED_TEMP, OUTPUT);
 
-  
+  ledcSetup(0, 2000, 8);
+  ledcAttachPin(BUZZER, 0);
 
   dhtSensor.setup(DHTPIN, DHTesp::DHT22);
 
@@ -113,6 +119,7 @@ void setup()
 
   setupWiFiWokwi();
   setupMQTT();
+  setup_servo();
 
 
   display.clearDisplay();
@@ -139,7 +146,22 @@ void loop()
     connectToBroker();
   }
   mqttClient.loop();
-  mqttClient.publish("rashmikanaveen", "hi");
+
+  
+  // Publish the JSON string to the MQTT topic
+  mqttClient.publish("rashmikanaveen-temp-humidity", SendTEmpAndHumidityData());
+
+  
+  
+  // Publish the LDR value to the MQTT topic
+  unsigned long now = millis();
+  float intensity=retunLDRIntensity();
+
+  if ((now - lastSample) >= ts * 1000) {
+    lastSample = now;
+
+    mqttClient.publish("rashmikanaveen-ldr-value", String(intensity).c_str());
+  }
 
   update_time_with_check_alarm();
   if (digitalRead(PB_OK) == LOW)
@@ -148,6 +170,9 @@ void loop()
     go_to_menu();
   }
   check_temp();
+  adjust_servo( intensity, getTemperature());
+  
+  
 }
 
 
@@ -163,8 +188,12 @@ void update_time_with_check_alarm()
     {
       if (alarm_triggered[i] == false && alarm_hours[i] == hours && alarm_minutes[i] == minutes)
       {
+        
         ring_alarm(i); // Pass the alarm index
         alarm_triggered[i] = true;
+      }
+      else{
+        alarm_on = false;
       }
     }
   }
@@ -176,6 +205,11 @@ void update_time()
   //Serial.print("Current time: ");
   //Serial.println(timeClient.getFormattedTime());
   display.clearDisplay();
+  hours=timeClient.getHours();
+  minutes=timeClient.getMinutes();
+  seconds=timeClient.getSeconds();
+  
+
   print_line(timeClient.getFormattedTime(), 0, 0, 2);
 }
 
@@ -201,8 +235,11 @@ void print_line(String text, int column, int row, int text_size)
 
 void ring_alarm(int alarm_index)
 {
+  alarm_on = true;
+  Serial.println(alarm_on);
   display.clearDisplay();
   print_line("Medicine time!", 0, 0, 2);
+  Serial.println("Alarm triggered!");
 
   digitalWrite(LED_1, HIGH);
 
@@ -211,8 +248,10 @@ void ring_alarm(int alarm_index)
   // Ring the buzzer and blink the LED
   while (!alarm_stopped)
   {
+    
     for (int i = 0; i < n_notes; i++)
     {
+      mqttClient.publish("rashmikanaveen-alarm-state", "on");
       if (digitalRead(PB_CANCEL) == LOW)
       { // Stop the alarm
         delay(200);
@@ -234,6 +273,7 @@ void ring_alarm(int alarm_index)
         delay(1000);
         break;
       }
+      
       tone(BUZZER, notes[i]);
       digitalWrite(LED_1, HIGH);
       delay(250);
@@ -245,6 +285,7 @@ void ring_alarm(int alarm_index)
 
   digitalWrite(LED_1, LOW);
   display.clearDisplay();
+  Serial.println("Alarm stopped!");
 }
 
 

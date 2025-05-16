@@ -16,6 +16,7 @@ void setupMQTT(){
 
 
 void receviveCallback(char* topic, byte* payload, unsigned int length) {
+ 
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -27,17 +28,12 @@ void receviveCallback(char* topic, byte* payload, unsigned int length) {
   }
   payloadCharAr[length] = '\0'; // Null-terminate the string
   Serial.println();
-  /*
-  if (strcmp(topic, "rashmikanaveen") == 0) {
-    if (strcmp(payloadCharAr, "on") == 0) {
-      digitalWrite(ledPin, HIGH);
-      Serial.println("LED ON");
-    } else if (strcmp(payloadCharAr, "off") == 0) {
-      digitalWrite(ledPin, LOW);
-      Serial.println("LED OFF");
-    }
+  
+  if (strcmp(topic, "rashmikanaveen-ts") == 0) {
+    int value = atoi(payloadCharAr);
+    ts=value;
   }
-  */
+  
 }
 
 void connectToBroker(){
@@ -46,6 +42,8 @@ void connectToBroker(){
     if(mqttClient.connect("ESP32-rashmikanaveen")){
       Serial.println("Connected to MQTT Broker");
       mqttClient.subscribe("rashmikanaveen");
+      mqttClient.subscribe("rashmikanaveen-ts");
+      mqttClient.subscribe("rashmikanaveen-tu");
     }else{
       Serial.print("Failed to connect, rc=");
       Serial.print(mqttClient.state());

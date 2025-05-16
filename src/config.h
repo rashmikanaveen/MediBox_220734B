@@ -14,6 +14,7 @@ extern PubSubClient mqttClient;
 extern DHTesp dhtSensor;
 
 
+
 // Function declarations
 void setupWiFi();
 void setupWiFiWokwi();
@@ -22,12 +23,29 @@ void setupMQTT();
 void connectToBroker();
 void receviveCallback(char* topic, byte* payload, unsigned int length);
 void check_temp();
+char* SendTEmpAndHumidityData();
+float retunLDRIntensity() ;
+void setup_servo();
+void run_servo();
+void adjust_servo(float intensity, float temperature);
+float getTemperature();
+float getHumidity();
 
 // Constants and macros
 #define LED_HUMIDITY 25
 #define LED_TEMP 26
+#define BUZZER 5
+#define LDR_AO 36
+#define servo_pin 27
 
+int ts=5;
 // Global variable declarations (if needed)
 extern int globalVariable;
+
+
+float theta_offset = 30.0;
+float gammaa = 0.75;
+float Tmed = 30.0;
+int tu = 5; // default
 
 #endif // CONFIG_H
