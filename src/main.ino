@@ -43,19 +43,19 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
 // Global variables
-int days = 0;
-int hours = 0;
-int minutes = 0;
-int seconds = 0;
+int days;
+int hours ;
+int minutes;
+int seconds ;
 
 unsigned long timeNow = 0;
 unsigned long timeLast = 0;
 unsigned long lastSample = 0;
+unsigned long lastTempHumPublish = 0; 
 
-bool alarm_enabled = true;
 int n_alarm = 2;
-int alarm_hours[2] = {18, 18};
-int alarm_minutes[2] = {19, 20};
+int alarm_hours[2] = {17, 17};
+int alarm_minutes[2] = {42, 43};
 bool alarm_triggered[2] = {false, false};
 
 
@@ -103,7 +103,7 @@ void setup()
   pinMode(LED_TEMP, OUTPUT);
 
   ledcSetup(0, 2000, 8);
-  ledcAttachPin(BUZZER, 0);
+  //ledcAttachPin(BUZZER, 0);
 
   dhtSensor.setup(DHTPIN, DHTesp::DHT22);
 
@@ -149,7 +149,7 @@ void loop()
 
   
   // Publish the JSON string to the MQTT topic
-  mqttClient.publish("rashmikanaveen-temp-humidity", SendTEmpAndHumidityData());
+  //mqttClient.publish("rashmikanaveen-temp-humidity", SendTEmpAndHumidityData());
 
   
   
@@ -160,8 +160,15 @@ void loop()
   if ((now - lastSample) >= ts * 1000) {
     lastSample = now;
 
-    mqttClient.publish("rashmikanaveen-ldr-value", String(intensity).c_str());
+    mqttClient.publish("rashmikanaveen-ldr-value", String(intensity).c_str());//ldr to dashboard
   }
+  
+  if (now - lastTempHumPublish >= 5000) {
+    lastTempHumPublish = now;
+    mqttClient.publish("rashmikanaveen-temp-humidity", SendTEmpAndHumidityData());
+  }
+
+  
 
   update_time_with_check_alarm();
   if (digitalRead(PB_OK) == LOW)
@@ -176,11 +183,27 @@ void loop()
 }
 
 
+void start_ring_alarm_in_task(int alarm_index) {
+  int *param = new int(alarm_index);
+  xTaskCreate(
+    [](void *param) {
+      int idx = *((int*)param);
+      delete (int*)param;
+      ring_alarm(idx);
+      vTaskDelete(NULL);
+    },
+    "RingAlarmTask",
+    4096,
+    param,
+    1,
+    NULL
+  );
+}
+
+// Then update your update_time_with_check_alarm() like this:
 void update_time_with_check_alarm()
 {
-  
   update_time();
-  
 
   if (alarm_enabled == true)
   {
@@ -188,8 +211,7 @@ void update_time_with_check_alarm()
     {
       if (alarm_triggered[i] == false && alarm_hours[i] == hours && alarm_minutes[i] == minutes)
       {
-        
-        ring_alarm(i); // Pass the alarm index
+        start_ring_alarm_in_task(i); // <-- Use the task starter here!
         alarm_triggered[i] = true;
       }
       else{
@@ -229,9 +251,61 @@ void print_line(String text, int column, int row, int text_size)
 
 
 
+void ring_alarm(int alarm_index)
+{
+  display.clearDisplay();
+  print_line("Medicine time!", 0, 0, 2);
+  mqttClient.publish("rashmikanaveen-alarm-state", "on");
+  Serial.println("Alarm triggered!");
+
+  digitalWrite(LED_1, HIGH);
+
+  bool alarm_stopped = false;
+
+  // Ring the buzzer and blink the LED
+  while (!alarm_stopped)
+  {
+    
+    for (int i = 0; i < n_notes; i++)
+    {
+      if (digitalRead(PB_CANCEL) == LOW)
+      { // Stop the alarm
+        delay(200);
+        alarm_stopped = true;
+        break;
+      }
+      else if (digitalRead(PB_OK) == LOW)
+      { // Snooze the alarm
+        delay(200);
+        alarm_hours[alarm_index] = hours;
+        alarm_minutes[alarm_index] = (minutes + 5) % 60; // Add 5 minutes for snooze
+        if (minutes + 5 >= 60)
+        {
+          alarm_hours[alarm_index] = (hours + 1) % 24;
+        }
+        alarm_stopped = true;
+        display.clearDisplay();
+        print_line("Snoozed for 5 min!", 0, 0, 2);
+        delay(1000);
+        break;
+      }
+      //tone(BUZZER, notes[i]);
+     
+      //delay(250);
+      //noTone(BUZZER);
+      
+      //delay(250);
+    }
+  }
+
+  digitalWrite(LED_1, LOW);
+  noTone(BUZZER);
+  display.clearDisplay();
+}
 
 
 
+/*
 
 void ring_alarm(int alarm_index)
 {
@@ -287,7 +361,7 @@ void ring_alarm(int alarm_index)
   display.clearDisplay();
   Serial.println("Alarm stopped!");
 }
-
+*/
 
 int wait_for_button_press()
 {

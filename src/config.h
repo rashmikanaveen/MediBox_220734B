@@ -34,14 +34,14 @@ float getHumidity();
 // Constants and macros
 #define LED_HUMIDITY 25
 #define LED_TEMP 26
-#define BUZZER 5
+#define BUZZER 2
 #define LDR_AO 36
-#define servo_pin 27
+#define servo_pin 14
 
 int ts=5;
 // Global variable declarations (if needed)
 extern int globalVariable;
-
+bool alarm_enabled = true;
 
 float theta_offset = 30.0;
 float gammaa = 0.75;
