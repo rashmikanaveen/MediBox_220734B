@@ -65,7 +65,7 @@
         "type": "debug",
         "z": "0af58d45d036aef2",
         "name": "debug 1",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -312,7 +312,8 @@
             [
                 "c3286c906db0a03a",
                 "cdbbc29ff24f4d5d",
-                "5695d2e943439b99"
+                "5695d2e943439b99",
+                "c6146f7585f852e5"
             ]
         ]
     },
@@ -517,7 +518,7 @@
         "type": "debug",
         "z": "0af58d45d036aef2",
         "name": "debug 3",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -848,6 +849,34 @@
         "statusType": "auto",
         "x": 680,
         "y": 1660,
+        "wires": []
+    },
+    {
+        "id": "c6146f7585f852e5",
+        "type": "ui_gauge",
+        "z": "0af58d45d036aef2",
+        "name": "",
+        "group": "759ec6f5a0863283",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "1",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 1050,
+        "y": 1060,
         "wires": []
     },
     {
