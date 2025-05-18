@@ -34,7 +34,7 @@ float getHumidity();
 // Constants and macros
 #define LED_HUMIDITY 25
 #define LED_TEMP 26
-#define BUZZER 2
+#define BUZZER 4
 #define LDR_AO 36
 #define servo_pin 14
 
@@ -51,8 +51,8 @@ int alarmTime[2];
 
 unsigned long alarmTimeMs = 0;
 int n_alarm = 3;
-int alarm_hours[3] = {12, 12,-1};
-int alarm_minutes[3] = {46, 47,-1};
+int alarm_hours[3] = {13, 13,-1};
+int alarm_minutes[3] = {7, 8,-1};
 bool alarm_triggered[3] = {false, false,false};
 
 #endif // CONFIG_H
