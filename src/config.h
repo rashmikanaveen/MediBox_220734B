@@ -47,5 +47,8 @@ float theta_offset = 30.0;
 float gammaa = 0.75;
 float Tmed = 30.0;
 int tu = 5; // default
+int alarmTime[2];
+
+unsigned long alarmTimeMs = 0;
 
 #endif // CONFIG_H

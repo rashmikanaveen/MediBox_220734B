@@ -26,6 +26,7 @@ void connectToBroker(){
       mqttClient.subscribe("rashmikanaveen-γ");
       mqttClient.subscribe("rashmikanaveen-T_med");
       mqttClient.subscribe("rashmikanaveen-alarm-on-off");
+      mqttClient.subscribe("rashmikanaveen-set-alarm-time");
     }else{
       Serial.print("Failed to connect, rc=");
       Serial.print(mqttClient.state());
@@ -73,6 +74,21 @@ void receviveCallback(char* topic, byte* payload, unsigned int length) {
   if (strcmp(topic, "rashmikanaveen-T_med") == 0) {
     alarm_enabled=!alarm_enabled;
   }
+  if (strcmp(topic, "rashmikanaveen-set-alarm-time") == 0) {
+    alarmTimeMs = strtoul(payloadCharAr, NULL, 10);
+    Serial.print("Alarm time in ms: ");
+    Serial.println(alarmTimeMs);
+
+    // Convert ms to hours and minutes
+    alarmTime[0] = alarmTimeMs / 3600000;                // hours
+    alarmTime[1] = (alarmTimeMs % 3600000) / 60000;      // minutes
+
+    Serial.print("Alarm hour: ");
+    Serial.println(alarmTime[0]);
+    Serial.print("Alarm minute: ");
+    Serial.println(alarmTime[1]);
+  }
+}
+  
 
   
-}
