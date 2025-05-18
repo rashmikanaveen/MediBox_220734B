@@ -53,10 +53,7 @@ unsigned long timeLast = 0;
 unsigned long lastSample = 0;
 unsigned long lastTempHumPublish = 0; 
 
-int n_alarm = 2;
-int alarm_hours[2] = {17, 17};
-int alarm_minutes[2] = {42, 43};
-bool alarm_triggered[2] = {false, false};
+
 
 
 bool alarm_on = false;

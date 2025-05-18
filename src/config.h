@@ -50,5 +50,9 @@ int tu = 5; // default
 int alarmTime[2];
 
 unsigned long alarmTimeMs = 0;
+int n_alarm = 3;
+int alarm_hours[3] = {12, 12,-1};
+int alarm_minutes[3] = {46, 47,-1};
+bool alarm_triggered[3] = {false, false,false};
 
 #endif // CONFIG_H

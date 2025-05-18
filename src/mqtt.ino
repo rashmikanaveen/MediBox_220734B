@@ -84,11 +84,12 @@ void receviveCallback(char* topic, byte* payload, unsigned int length) {
     alarmTime[1] = (alarmTimeMs % 3600000) / 60000;      // minutes
 
     Serial.print("Alarm hour: ");
+    alarm_hours[2] = alarmTime[0];
     Serial.println(alarmTime[0]);
     Serial.print("Alarm minute: ");
+    alarm_minutes[2] = alarmTime[1];
     Serial.println(alarmTime[1]);
   }
 }
   
 
-  
