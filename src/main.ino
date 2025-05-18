@@ -87,7 +87,7 @@ void setup()
   pinMode(LED_HUMIDITY, OUTPUT);
   pinMode(LED_TEMP, OUTPUT);
 
-  ledcSetup(0, 2000, 8);
+  //ledcSetup(0, 2000, 8);
   //ledcAttachPin(BUZZER, 0);
 
   dhtSensor.setup(DHTPIN, DHTesp::DHT22);
