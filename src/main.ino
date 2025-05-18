@@ -56,19 +56,7 @@ unsigned long lastTempHumPublish = 0;
 
 
 
-bool alarm_on = false;
 
-int n_notes = 8;
-int C = 262;
-int D = 294;
-int E = 330;
-int F = 349;
-int G = 392;
-int A = 440;
-int B = 494;
-int C_H = 523;
-
-int notes[8] = {C, D, E, F, G, A, B, C_H};
 
 int current_mode = 0;
 int max_modes = 6;
@@ -130,6 +118,7 @@ void setup()
   print_line("Welcome to Medibox!", 10, 20, 2);
   // delay(2000);
   display.clearDisplay();
+  //run_servo();
 
 }
 
@@ -286,12 +275,7 @@ void ring_alarm(int alarm_index)
         delay(1000);
         break;
       }
-      //tone(BUZZER, notes[i]);
-     
-      //delay(250);
-      //noTone(BUZZER);
-      
-      //delay(250);
+      //play_buzzer();
     }
   }
 
@@ -683,4 +667,3 @@ void delete_alarm()
     }
   }
 }
-
