@@ -14,6 +14,23 @@ This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and App
 6. **Snooze Functionality**: Snooze alarms for 5 minutes using a button.
 7. **Temperature and Humidity Monitoring**: Display warnings if the temperature or humidity goes out of range.
 
+
+---
+
+## Versioning
+
+- **Current Version:** [`rashmika-version3-220734B`](https://github.com/rashmikanaveen/MediBox_220734B/tree/rashmika-version3-220734B)
+  - This branch contains the latest updates, including:
+    - Light intensity monitoring with configurable intervals.
+    - Dynamic shaded sliding window controlled by a servo motor.
+    - Enhanced Node-RED dashboard for real-time monitoring and control.
+  - Recommended for users who want the most up-to-date features.
+
+- **Previous Versions:**
+  - `version2-220734B`: Added temperature and humidity monitoring.
+  - `main`: Initial implementation with basic alarm functionality.
+
+---
 ---
 
 ## Platforms Used
