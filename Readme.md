@@ -1,6 +1,6 @@
 # Smart MediBox
 
-This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and Applications course. The Smart MediBox is designed to help users manage their medication schedules effectively by providing alarm notifications and temperature/humidity monitoring.
+This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and Applications course. The Smart MediBox is designed to help users manage their medication schedules effectively by providing alarm notifications, temperature/humidity monitoring, and dynamic light intensity control.
 
 ---
 
@@ -13,6 +13,36 @@ This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and App
 5. **Alarm Notifications**: Ring a buzzer and blink an LED when an alarm is triggered.
 6. **Snooze Functionality**: Snooze alarms for 5 minutes using a button.
 7. **Temperature and Humidity Monitoring**: Display warnings if the temperature or humidity goes out of range.
+8. **Light Intensity Monitoring**:
+   - Uses an LDR to measure light intensity.
+   - Readings are taken at a configurable sampling interval (default: 5 seconds).
+   - Average values are calculated over a configurable sending interval (default: 2 minutes) and sent to the Node-RED dashboard.
+   - Node-RED dashboard includes:
+     - Numerical display for the most recent average light intensity (range: 0 to 1).
+     - Chart to visualize historical average values.
+     - Sliders to adjust:
+       - Sampling interval (`ts`)
+       - Sending interval (`tu`)
+9. **Dynamic Shaded Sliding Window**:
+   - Prevents excessive light from entering the Medibox using a servo motor.
+   - Servo motor adjusts its angle (0–180°) based on light intensity and temperature.
+   - The angle is calculated using the equation:
+     ```
+     θ = θoffset + (180 − θoffset) × I × γ × ln(ts/tu) × T/Tmed
+     ```
+     Where:
+     - `θ`: Motor angle
+     - `θoffset`: Minimum angle (default: 30°)
+     - `I`: Light intensity (0 to 1)
+     - `γ`: Controlling factor (default: 0.75)
+     - `ts`: Sampling interval (seconds)
+     - `tu`: Sending interval (seconds)
+     - `T`: Measured temperature (°C)
+     - `Tmed`: Ideal storage temperature (default: 30°C)
+   - Node-RED dashboard includes sliders to adjust:
+     - Minimum angle (`θoffset`): 0–120°
+     - Controlling factor (`γ`): 0–1
+     - Ideal storage temperature (`Tmed`): 10–40°C
 
 ---
 
@@ -20,7 +50,7 @@ This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and App
 
 ### Wokwi
 - The **Wokwi Simulator** was used to design and simulate the hardware components of the Smart MediBox.
-- Wokwi provides a virtual environment to test the ESP32, OLED display, DHT22 sensor, buzzer, and push buttons without requiring physical hardware.
+- Wokwi provides a virtual environment to test the ESP32, OLED display, DHT22 sensor, buzzer, servo motor, and push buttons without requiring physical hardware.
 - [Visit Wokwi](https://wokwi.com/) to learn more.
 - **View the Smart MediBox Project on Wokwi**: [Smart MediBox on Wokwi](https://wokwi.com/projects/426657665966733313)
 
@@ -34,8 +64,10 @@ This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and App
 ## Hardware Components
 
 - **ESP32 DevKit v1**: Microcontroller for managing the system.
-- **SSD1306 OLED Display**: Displays time, alarms, and notifications.
+- **SSD1306 OLED Display**: Displays time, alarms, notifications, and light intensity information.
 - **DHT22 Sensor**: Monitors temperature and humidity.
+- **LDR**: Measures light intensity.
+- **Servo Motor**: Adjusts the shaded sliding window based on environmental conditions.
 - **Buzzer**: Provides audible alarm notifications.
 - **Push Buttons**: Used for menu navigation and alarm control.
 - **LED**: Blinks during alarm notifications.
@@ -55,13 +87,14 @@ This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and App
 
 ## Images
 
-### MediBox Before Turning On
+### MediBox Simulation
 ![MediBox Before Turning On](assets/MediBoxBeforeOn.png)
 
-### MediBox in Action
-![MediBox in Action - 1](assets/MediBox2.png)
+### Flows
+![Flows.json](assets/Flows.png)
 
-![MediBox in Action - 2](assets/MediBox3.png)
+### Node-RED Dashboard
+![Dashboard](assets/Dashboard.png)
 
 ---
 
@@ -83,6 +116,16 @@ This project, **Smart MediBox**, is part of the EN2853: Embedded Systems and App
    - The system continuously monitors the environment.
    - Displays warnings if the temperature exceeds 32°C or drops below 24°C, or if the humidity goes out of the 65%-80% range.
 
+5. **Light Intensity Monitoring**:
+   - LDR readings are taken at regular intervals (default: 5 seconds).
+   - Average values are calculated over a configurable period (default: 2 minutes) and sent to the Node-RED dashboard.
+   - The dashboard includes a numerical display, chart, and sliders for configuration.
+
+6. **Dynamic Shaded Sliding Window**:
+   - The servo motor adjusts the window angle based on light intensity and temperature.
+   - The angle is calculated using the environmental equation provided above.
+   - Users can adjust parameters (`θoffset`, `γ`, `Tmed`) via the Node-RED dashboard.
+
 ---
 
 ## Circuit Diagram
@@ -98,6 +141,7 @@ The circuit diagram for the Smart MediBox is available in the Wokwi simulator.
 3. Connect the hardware components as per the circuit diagram.
 4. Build and upload the code to the ESP32.
 5. Use the buttons to navigate the menu and set alarms.
+6. Configure light intensity monitoring and sliding window parameters via the Node-RED dashboard.
 
 ---
 
