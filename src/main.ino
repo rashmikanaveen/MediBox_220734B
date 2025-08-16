@@ -5,13 +5,19 @@
 #include <DHTesp.h>
 #include <WiFi.h>
 
+#include<WiFiUdp.h>
+#include<NTPClient.h>
+#include<PubSubClient.h>
+#include "config.h"
+
+
 // Define the OLED display
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 64    // OLED display height, in pixels
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
-#define BUZZER 5
+
 #define LED_1 15
 
 #define PB_CANCEL 34
@@ -21,44 +27,36 @@
 
 #define DHTPIN 12
 
-#define LED_HUMIDITY 25
-#define LED_TEMP 26
 
 
-#define NTP_SERVER "pool.ntp.org"
-#define UTC_OFFSET 19800 // Sri Lanka is UTC+5:30, which is 19800 seconds
-#define UTC_OFFSET_DST 0
+
+
 
 // declare objects
+WiFiUDP udp;
+NTPClient timeClient(udp, "pool.ntp.org", 19800, 60000);
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 DHTesp dhtSensor;
 
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+
 // Global variables
-int days = 0;
-int hours = 0;
-int minutes = 0;
-int seconds = 0;
+int days;
+int hours ;
+int minutes;
+int seconds ;
 
 unsigned long timeNow = 0;
 unsigned long timeLast = 0;
+unsigned long lastSample = 0;
+unsigned long lastTempHumPublish = 0; 
 
-bool alarm_enabled = true;
-int n_alarm = 2;
-int alarm_hours[2] = {0, 23};
-int alarm_minutes[2] = {23, 59};
-bool alarm_triggered[2] = {false, false};
 
-int n_notes = 8;
-int C = 262;
-int D = 294;
-int E = 330;
-int F = 349;
-int G = 392;
-int A = 440;
-int B = 494;
-int C_H = 523;
 
-int notes[8] = {C, D, E, F, G, A, B, C_H};
+
+
 
 int current_mode = 0;
 int max_modes = 6;
@@ -69,6 +67,11 @@ String modes[6] = {"1-Set Time",
                    alarm_enabled ? "4-Disable Alarm" : "4-Enable Alarm",
                    "5-View Alarms",
                    "6-Delete Alarm"};
+
+
+
+
+
 
 
 void setup()
@@ -84,6 +87,8 @@ void setup()
   pinMode(LED_HUMIDITY, OUTPUT);
   pinMode(LED_TEMP, OUTPUT);
 
+  //ledcSetup(0, 2000, 8);
+  //ledcAttachPin(BUZZER, 0);
 
   dhtSensor.setup(DHTPIN, DHTesp::DHT22);
 
@@ -96,30 +101,60 @@ void setup()
   }
   display.display();
   // delay(2000);
-  WiFi.begin("Wokwi-GUEST", "", 6);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(250);
-    display.clearDisplay();
-    print_line("Connecting to WiFi", 0, 0, 2);
-  }
+
+  setupWiFiWokwi();
+  setupMQTT();
+  setup_servo();
+
 
   display.clearDisplay();
   print_line("Connected to WiFi", 0, 0, 2);
+  timeClient.begin();
 
-  configTime(UTC_OFFSET, UTC_OFFSET_DST, NTP_SERVER);
+  
 
   display.clearDisplay();
 
   print_line("Welcome to Medibox!", 10, 20, 2);
   // delay(2000);
   display.clearDisplay();
+  //run_servo();
+
 }
 
 
 void loop()
 {
+  
   // Serial.println(wait_for_button_press());
+
+  if(!mqttClient.connected()){
+    connectToBroker();
+  }
+  mqttClient.loop();
+
+  
+  // Publish the JSON string to the MQTT topic
+  //mqttClient.publish("rashmikanaveen-temp-humidity", SendTEmpAndHumidityData());
+
+  
+  
+  // Publish the LDR value to the MQTT topic
+  unsigned long now = millis();
+  float intensity=retunLDRIntensity();
+
+  if ((now - lastSample) >= ts * 1000) {
+    lastSample = now;
+
+    mqttClient.publish("rashmikanaveen-ldr-value", String(intensity).c_str());//ldr to dashboard
+  }
+  
+  if (now - lastTempHumPublish >= 5000) {
+    lastTempHumPublish = now;
+    mqttClient.publish("rashmikanaveen-temp-humidity", SendTEmpAndHumidityData());
+  }
+
+  
 
   update_time_with_check_alarm();
   if (digitalRead(PB_OK) == LOW)
@@ -128,13 +163,33 @@ void loop()
     go_to_menu();
   }
   check_temp();
+  adjust_servo( intensity, getTemperature());
+  
+  
 }
 
 
+void start_ring_alarm_in_task(int alarm_index) {
+  int *param = new int(alarm_index);
+  xTaskCreate(
+    [](void *param) {
+      int idx = *((int*)param);
+      delete (int*)param;
+      ring_alarm(idx);
+      vTaskDelete(NULL);
+    },
+    "RingAlarmTask",
+    4096,
+    param,
+    1,
+    NULL
+  );
+}
+
+// Then update your update_time_with_check_alarm() like this:
 void update_time_with_check_alarm()
 {
   update_time();
-  print_time_now();
 
   if (alarm_enabled == true)
   {
@@ -142,8 +197,11 @@ void update_time_with_check_alarm()
     {
       if (alarm_triggered[i] == false && alarm_hours[i] == hours && alarm_minutes[i] == minutes)
       {
-        ring_alarm(i); // Pass the alarm index
+        start_ring_alarm_in_task(i); // <-- Use the task starter here!
         alarm_triggered[i] = true;
+      }
+      else{
+        alarm_on = false;
       }
     }
   }
@@ -151,25 +209,19 @@ void update_time_with_check_alarm()
 
 void update_time()
 {
-  struct tm timeinfo;
-  getLocalTime(&timeinfo);
-  days = timeinfo.tm_mday;
-  hours = timeinfo.tm_hour;
-  minutes = timeinfo.tm_min;
-  seconds = timeinfo.tm_sec;
+  timeClient.update();
+  //Serial.print("Current time: ");
+  //Serial.println(timeClient.getFormattedTime());
+  display.clearDisplay();
+  hours=timeClient.getHours();
+  minutes=timeClient.getMinutes();
+  seconds=timeClient.getSeconds();
+  
+
+  print_line(timeClient.getFormattedTime(), 0, 0, 2);
 }
 
-void print_time_now()
-{
-  display.clearDisplay();
-  print_line(String(days), 0, 0, 2);
-  print_line(":", 20, 0, 2);
-  print_line(String(hours), 30, 0, 2);
-  print_line(":", 50, 0, 2);
-  print_line(String(minutes), 60, 0, 2);
-  print_line(":", 80, 0, 2);
-  print_line(String(seconds), 90, 0, 2);
-}
+
 
 
 
@@ -185,14 +237,12 @@ void print_line(String text, int column, int row, int text_size)
 
 
 
-
-
-
-
 void ring_alarm(int alarm_index)
 {
   display.clearDisplay();
   print_line("Medicine time!", 0, 0, 2);
+  mqttClient.publish("rashmikanaveen-alarm-state", "on");
+  Serial.println("Alarm triggered!");
 
   digitalWrite(LED_1, HIGH);
 
@@ -201,6 +251,7 @@ void ring_alarm(int alarm_index)
   // Ring the buzzer and blink the LED
   while (!alarm_stopped)
   {
+    
     for (int i = 0; i < n_notes; i++)
     {
       if (digitalRead(PB_CANCEL) == LOW)
@@ -224,6 +275,60 @@ void ring_alarm(int alarm_index)
         delay(1000);
         break;
       }
+      //play_buzzer();
+    }
+  }
+
+  digitalWrite(LED_1, LOW);
+  noTone(BUZZER);
+  display.clearDisplay();
+}
+
+
+
+/*
+
+void ring_alarm(int alarm_index)
+{
+  alarm_on = true;
+  Serial.println(alarm_on);
+  display.clearDisplay();
+  print_line("Medicine time!", 0, 0, 2);
+  Serial.println("Alarm triggered!");
+
+  digitalWrite(LED_1, HIGH);
+
+  bool alarm_stopped = false;
+
+  // Ring the buzzer and blink the LED
+  while (!alarm_stopped)
+  {
+    
+    for (int i = 0; i < n_notes; i++)
+    {
+      mqttClient.publish("rashmikanaveen-alarm-state", "on");
+      if (digitalRead(PB_CANCEL) == LOW)
+      { // Stop the alarm
+        delay(200);
+        alarm_stopped = true;
+        break;
+      }
+      else if (digitalRead(PB_OK) == LOW)
+      { // Snooze the alarm
+        delay(200);
+        alarm_hours[alarm_index] = hours;
+        alarm_minutes[alarm_index] = (minutes + 5) % 60; // Add 5 minutes for snooze
+        if (minutes + 5 >= 60)
+        {
+          alarm_hours[alarm_index] = (hours + 1) % 24;
+        }
+        alarm_stopped = true;
+        display.clearDisplay();
+        print_line("Snoozed for 5 min!", 0, 0, 2);
+        delay(1000);
+        break;
+      }
+      
       tone(BUZZER, notes[i]);
       digitalWrite(LED_1, HIGH);
       delay(250);
@@ -235,8 +340,9 @@ void ring_alarm(int alarm_index)
 
   digitalWrite(LED_1, LOW);
   display.clearDisplay();
+  Serial.println("Alarm stopped!");
 }
-
+*/
 
 int wait_for_button_press()
 {
@@ -491,40 +597,6 @@ void run_mode(int mode)
 
 
 
-
-void check_temp()
-{
-  TempAndHumidity data = dhtSensor.getTempAndHumidity();
-  if (data.temperature > 32)
-  {
-
-    print_line("Temperature is high!", 0, 40, 1);
-    digitalWrite(LED_TEMP, HIGH);
-  }
-  else if (data.temperature < 24)
-  {
-
-    print_line("Temperature is low!", 0, 40, 1);
-    digitalWrite(LED_TEMP, HIGH);
-  }
-  if (data.humidity > 80)
-  {
-
-    print_line("Humidity is high!", 0, 50, 1);
-    digitalWrite(LED_HUMIDITY, HIGH);
-  }
-  else if (data.humidity < 65)
-  {
-
-    print_line("Humidity is low!", 0, 50, 1);
-    digitalWrite(LED_HUMIDITY, HIGH);
-  }
-  else
-  {
-    digitalWrite(LED_TEMP, LOW);
-    digitalWrite(LED_HUMIDITY, LOW);
-  }
-}
 
 // my implementtaions
 void view_active_alarms()
